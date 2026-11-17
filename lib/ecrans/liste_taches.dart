@@ -4,6 +4,9 @@ import 'package:material_ui/material_ui.dart';
 
 import '../donnees/exemples.dart';
 import '../modele/taches.dart';
+import '../widgets/tuile_tache.dart';
+
+enum FiltreTaches { toutes, aFaire, faites }
 
 class ListeTaches extends StatefulWidget {
   const ListeTaches({super.key});
@@ -15,6 +18,7 @@ class ListeTaches extends StatefulWidget {
 class _ListeTachesState extends State<ListeTaches> {
   late final List<Tache> _taches;
   int _prochainNumero = 1;
+  FiltreTaches _filtre = FiltreTaches.toutes;
 
   @override
   void initState() {
@@ -58,6 +62,19 @@ class _ListeTachesState extends State<ListeTaches> {
   Widget build(BuildContext context) {
     final statistiques = bilan(_taches);
     final restantes = statistiques.total - statistiques.faites;
+    final visibles = _taches.where((tache) {
+      return switch (_filtre) {
+        FiltreTaches.toutes => true,
+        FiltreTaches.aFaire => !tache.faite,
+        FiltreTaches.faites => tache.faite,
+      };
+    }).toList();
+    final aujourdhui = DateTime.now();
+    final messageVide = switch (_filtre) {
+      FiltreTaches.toutes => 'Aucune tâche',
+      FiltreTaches.aFaire => 'Aucune tâche à faire',
+      FiltreTaches.faites => 'Aucune tâche faite',
+    };
 
     return Scaffold(
       appBar: AppBar(title: const Text('Mes tâches')),
@@ -67,23 +84,49 @@ class _ListeTachesState extends State<ListeTaches> {
             padding: const EdgeInsets.all(16),
             child: Text('$restantes à faire'),
           ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: _taches.length,
-              itemBuilder: (context, index) {
-                final tache = _taches[index];
-
-                return ListTile(
-                  leading: Checkbox(
-                    key: ValueKey('faite-${tache.id}'),
-                    value: tache.faite,
-                    onChanged: (_) => _basculerTache(tache),
-                  ),
-                  title: Text(tache.titre),
-                  subtitle: Text(tache.priorite.libelle),
-                );
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: SegmentedButton<FiltreTaches>(
+              segments: const [
+                ButtonSegment(
+                  value: FiltreTaches.toutes,
+                  label: Text('Toutes'),
+                ),
+                ButtonSegment(
+                  value: FiltreTaches.aFaire,
+                  label: Text('À faire'),
+                ),
+                ButtonSegment(
+                  value: FiltreTaches.faites,
+                  label: Text('Faites'),
+                ),
+              ],
+              selected: {_filtre},
+              showSelectedIcon: false,
+              onSelectionChanged: (selection) {
+                setState(() {
+                  _filtre = selection.single;
+                });
               },
             ),
+          ),
+          Expanded(
+            child: visibles.isEmpty
+                ? Center(child: Text(messageVide))
+                : ListView.builder(
+                    padding: const EdgeInsets.only(bottom: 88),
+                    itemCount: visibles.length,
+                    itemBuilder: (context, index) {
+                      final tache = visibles[index];
+
+                      return TuileTache(
+                        key: ValueKey(tache.id),
+                        tache: tache,
+                        aujourdhui: aujourdhui,
+                        onBasculer: () => _basculerTache(tache),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
