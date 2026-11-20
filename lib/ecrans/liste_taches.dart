@@ -6,6 +6,7 @@ import '../donnees/exemples.dart';
 import '../modele/taches.dart';
 import '../widgets/tuile_tache.dart';
 import 'detail_tache.dart';
+import 'formulaire_tache.dart';
 
 enum FiltreTaches { toutes, aFaire, faites }
 
@@ -33,14 +34,18 @@ class _ListeTachesState extends State<ListeTaches> {
     ];
   }
 
-  void _ajouterExemple() {
+  Future<void> _ajouterTache() async {
     String id;
 
     do {
       id = 'ajout-${_prochainNumero++}';
     } while (_taches.any((tache) => tache.id == id));
 
-    final nouvelle = Tache(id: id, titre: 'Nouvelle tâche $id');
+    final nouvelle = await Navigator.of(context).push<Tache>(
+      MaterialPageRoute<Tache>(builder: (_) => FormulaireTache(id: id)),
+    );
+
+    if (!mounted || nouvelle == null) return;
 
     setState(() {
       _taches.add(nouvelle);
@@ -150,7 +155,7 @@ class _ListeTachesState extends State<ListeTaches> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _ajouterExemple,
+        onPressed: _ajouterTache,
         icon: const Icon(Icons.add),
         label: const Text('Ajouter'),
       ),

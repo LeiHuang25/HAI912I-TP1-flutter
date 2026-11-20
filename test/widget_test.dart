@@ -229,4 +229,166 @@ void main() {
       expect(find.text('Faire les courses'), findsOneWidget);
     },
   );
+
+  testWidgets('crée une tâche et la rend visible dans la liste', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const MesTachesApp());
+
+    await tester.tap(find.text('Ajouter'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nouvelle tâche'), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const ValueKey('champ-titre')),
+      '  Préparer le rapport  ',
+    );
+
+    await tester.enterText(
+      find.byKey(const ValueKey('champ-note')),
+      '  Vérifier les captures  ',
+    );
+
+    final enregistrer = find.widgetWithText(FilledButton, 'Enregistrer');
+
+    await tester.ensureVisible(enregistrer);
+    await tester.tap(enregistrer);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nouvelle tâche'), findsNothing);
+    expect(find.text('6 à faire'), findsOneWidget);
+
+    final nouveauTitre = find.text('Préparer le rapport');
+
+    await tester.scrollUntilVisible(
+      nouveauTitre,
+      150,
+      scrollable: find.byType(Scrollable),
+    );
+
+    await tester.tap(nouveauTitre);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Priorité : Normale'), findsOneWidget);
+    expect(find.text('Échéance : sans échéance'), findsOneWidget);
+    expect(find.text('État : à faire'), findsOneWidget);
+    expect(find.text('Vérifier les captures'), findsOneWidget);
+  });
+
+  testWidgets('quitter le formulaire sans enregistrer n’ajoute rien', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const MesTachesApp());
+
+    await tester.tap(find.text('Ajouter'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const ValueKey('champ-titre')),
+      'Tâche abandonnée',
+    );
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(find.text('5 à faire'), findsOneWidget);
+    expect(find.text('Tâche abandonnée'), findsNothing);
+  });
+
+  testWidgets('un titre vide ou composé d’espaces garde le formulaire ouvert', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const MesTachesApp());
+
+    await tester.tap(find.text('Ajouter'));
+    await tester.pumpAndSettle();
+
+    final enregistrer = find.widgetWithText(FilledButton, 'Enregistrer');
+
+    await tester.ensureVisible(enregistrer);
+    await tester.tap(enregistrer);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nouvelle tâche'), findsOneWidget);
+    expect(find.text('Le titre est obligatoire'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const ValueKey('champ-titre')), '   ');
+
+    await tester.ensureVisible(enregistrer);
+    await tester.tap(enregistrer);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nouvelle tâche'), findsOneWidget);
+    expect(find.text('Le titre est obligatoire'), findsOneWidget);
+  });
+
+  testWidgets('refuse un titre de 61 caractères puis accepte 60 caractères', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const MesTachesApp());
+
+    await tester.tap(find.text('Ajouter'));
+    await tester.pumpAndSettle();
+
+    final titre61 = List.filled(61, 'a').join();
+    final titre60 = List.filled(60, 'a').join();
+    final champTitre = find.byKey(const ValueKey('champ-titre'));
+    final enregistrer = find.widgetWithText(FilledButton, 'Enregistrer');
+
+    await tester.enterText(champTitre, titre61);
+    await tester.ensureVisible(enregistrer);
+    await tester.tap(enregistrer);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nouvelle tâche'), findsOneWidget);
+    expect(
+      find.text('Le titre ne doit pas dépasser 60 caractères'),
+      findsOneWidget,
+    );
+
+    await tester.enterText(champTitre, titre60);
+    await tester.ensureVisible(enregistrer);
+    await tester.tap(enregistrer);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nouvelle tâche'), findsNothing);
+    expect(find.text('6 à faire'), findsOneWidget);
+  });
+
+  testWidgets('refuse une note de 201 caractères puis accepte 200 caractères', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const MesTachesApp());
+
+    await tester.tap(find.text('Ajouter'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const ValueKey('champ-titre')),
+      'Lire Dart',
+    );
+
+    final champNote = find.byKey(const ValueKey('champ-note'));
+    final enregistrer = find.widgetWithText(FilledButton, 'Enregistrer');
+
+    await tester.enterText(champNote, List.filled(201, 'a').join());
+    await tester.ensureVisible(enregistrer);
+    await tester.tap(enregistrer);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nouvelle tâche'), findsOneWidget);
+    expect(
+      find.text('La note ne doit pas dépasser 200 caractères'),
+      findsOneWidget,
+    );
+
+    await tester.enterText(champNote, List.filled(200, 'a').join());
+    await tester.ensureVisible(enregistrer);
+    await tester.tap(enregistrer);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nouvelle tâche'), findsNothing);
+    expect(find.text('6 à faire'), findsOneWidget);
+  });
 }
