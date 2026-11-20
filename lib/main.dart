@@ -17,7 +17,7 @@ class MesTachesApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       // Material 3 est le défaut et tout le thème dérive d'une couleur.
       theme: ThemeData(colorScheme: .fromSeed(seedColor: Colors.indigo)),
-      // Écran provisoire : à remplacer par votre écran de liste (B1).
+      // Écran principal : liste, filtres et navigation.
       home: const ListeTaches(),
     );
   }

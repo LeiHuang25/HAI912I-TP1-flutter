@@ -391,4 +391,102 @@ void main() {
     expect(find.text('Nouvelle tâche'), findsNothing);
     expect(find.text('6 à faire'), findsOneWidget);
   });
+
+  testWidgets('une note composée d’espaces devient une absence de note', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const MesTachesApp());
+
+    await tester.tap(find.text('Ajouter'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const ValueKey('champ-titre')),
+      'Tester la note vide',
+    );
+    await tester.enterText(find.byKey(const ValueKey('champ-note')), '   ');
+
+    final enregistrer = find.widgetWithText(FilledButton, 'Enregistrer');
+
+    await tester.ensureVisible(enregistrer);
+    await tester.tap(enregistrer);
+    await tester.pumpAndSettle();
+
+    final titre = find.text('Tester la note vide');
+
+    await tester.scrollUntilVisible(
+      titre,
+      150,
+      scrollable: find.byType(Scrollable),
+    );
+    await tester.tap(titre);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Aucune note'), findsOneWidget);
+  });
+
+  testWidgets('crée une tâche avec une échéance choisie dans le calendrier', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const MesTachesApp());
+
+    await tester.tap(find.text('Ajouter'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const ValueKey('champ-titre')),
+      'Tâche avec date',
+    );
+
+    await tester.tap(find.text('Choisir une date'));
+    await tester.pumpAndSettle();
+
+    final dialogue = find.byType(DatePickerDialog);
+    expect(dialogue, findsOneWidget);
+
+    final calendrier = tester.widget<DatePickerDialog>(dialogue);
+    final dateChoisie = calendrier.initialDate!;
+
+    final maintenant = DateTime.now();
+    final aujourdHui = DateTime(
+      maintenant.year,
+      maintenant.month,
+      maintenant.day,
+    );
+
+    // Les dates antérieures à aujourd’hui sont exclues.
+    expect(calendrier.firstDate, aujourdHui);
+
+    final libelleConfirmer = MaterialLocalizations.of(tester.element(dialogue))
+        .okButtonLabel;
+
+    await tester.tap(
+      find.descendant(of: dialogue, matching: find.text(libelleConfirmer)),
+    );
+    await tester.pumpAndSettle();
+
+    final libelle = 'pour le ${dateChoisie.day}/${dateChoisie.month}';
+
+    expect(find.text(libelle), findsOneWidget);
+
+    final enregistrer = find.widgetWithText(FilledButton, 'Enregistrer');
+
+    await tester.ensureVisible(enregistrer);
+    await tester.tap(enregistrer);
+    await tester.pumpAndSettle();
+
+    expect(find.text('6 à faire'), findsOneWidget);
+
+    final titre = find.text('Tâche avec date');
+
+    await tester.scrollUntilVisible(
+      titre,
+      150,
+      scrollable: find.byType(Scrollable),
+    );
+    await tester.tap(titre);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Échéance : $libelle'), findsOneWidget);
+  });
 }
