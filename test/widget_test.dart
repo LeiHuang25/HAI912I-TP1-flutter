@@ -149,4 +149,84 @@ void main() {
       expect(tester.takeException(), isNull);
     }
   });
+
+  testWidgets('ouvre le détail puis revient sans modifier la tâche', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const MesTachesApp());
+
+    await tester.tap(find.text('Relire le CM 01'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Détail de la tâche'), findsOneWidget);
+    expect(find.text('Relire le CM 01'), findsOneWidget);
+    expect(find.text('Priorité : Normale'), findsOneWidget);
+    expect(find.text('Échéance : sans échéance'), findsOneWidget);
+    expect(find.text('État : à faire'), findsOneWidget);
+    expect(find.text('records, patterns, classes scellées'), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Détail de la tâche'), findsNothing);
+    expect(find.text('5 à faire'), findsOneWidget);
+    expect(
+      tester.widget<Checkbox>(find.byKey(const ValueKey('faite-t2'))).value,
+      isFalse,
+    );
+  });
+
+  testWidgets(
+    'agir depuis le détail met à jour la bonne tâche sous un filtre',
+    (tester) async {
+      await tester.pumpWidget(const MesTachesApp());
+
+      await tester.tap(find.text('À faire'));
+      await tester.pumpAndSettle();
+
+      // Deuxième tâche affichée sous le filtre « À faire ».
+      await tester.tap(find.text('Faire les courses'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Détail de la tâche'), findsOneWidget);
+      expect(find.text('État : à faire'), findsOneWidget);
+
+      final bouton = find.widgetWithText(FilledButton, 'Marquer comme faite');
+
+      await tester.ensureVisible(bouton);
+      await tester.tap(bouton);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Détail de la tâche'), findsNothing);
+      expect(find.text('Faire les courses'), findsNothing);
+      expect(find.text('Relire le CM 01'), findsOneWidget);
+      expect(find.text('4 à faire'), findsOneWidget);
+
+      await tester.tap(find.text('Faites'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Faire les courses'), findsOneWidget);
+      expect(find.text('Installer Flutter'), findsOneWidget);
+      expect(find.text('Relire le CM 01'), findsNothing);
+
+      await tester.tap(find.text('Faire les courses'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('État : faite'), findsOneWidget);
+
+      final boutonRetour = find.widgetWithText(FilledButton, 'Marquer à faire');
+
+      await tester.ensureVisible(boutonRetour);
+      await tester.tap(boutonRetour);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Faire les courses'), findsNothing);
+      expect(find.text('5 à faire'), findsOneWidget);
+
+      await tester.tap(find.text('À faire'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Faire les courses'), findsOneWidget);
+    },
+  );
 }

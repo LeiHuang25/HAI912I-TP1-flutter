@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../donnees/exemples.dart';
 import '../modele/taches.dart';
 import '../widgets/tuile_tache.dart';
+import 'detail_tache.dart';
 
 enum FiltreTaches { toutes, aFaire, faites }
 
@@ -55,6 +56,23 @@ class _ListeTachesState extends State<ListeTaches> {
 
     setState(() {
       _taches[index] = actuelle.copyWith(faite: !actuelle.faite);
+    });
+  }
+
+  Future<void> _ouvrirTache(Tache tache) async {
+    final modifiee = await Navigator.of(context).push<Tache>(
+      MaterialPageRoute<Tache>(
+        builder: (_) => DetailTache(tache: tache, aujourdhui: DateTime.now()),
+      ),
+    );
+    if (!mounted || modifiee == null) return;
+
+    final index = _taches.indexWhere((element) => element.id == modifiee.id);
+
+    if (index == -1) return;
+
+    setState(() {
+      _taches[index] = modifiee;
     });
   }
 
@@ -124,6 +142,7 @@ class _ListeTachesState extends State<ListeTaches> {
                         tache: tache,
                         aujourdhui: aujourdhui,
                         onBasculer: () => _basculerTache(tache),
+                        onOuvrir: () => _ouvrirTache(tache),
                       );
                     },
                   ),
