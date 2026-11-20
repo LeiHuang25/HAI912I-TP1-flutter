@@ -1,12 +1,25 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../modele/taches.dart';
+import 'formulaire_tache.dart';
 
 class DetailTache extends StatelessWidget {
   const DetailTache({super.key, required this.tache, required this.aujourdhui});
 
   final Tache tache;
   final DateTime aujourdhui;
+
+  Future<void> _modifier(BuildContext context) async {
+    final modifiee = await Navigator.of(context).push<Tache>(
+      MaterialPageRoute<Tache>(
+        builder: (_) => FormulaireTache(id: tache.id, initiale: tache),
+      ),
+    );
+
+    if (!context.mounted || modifiee == null) return;
+
+    Navigator.of(context).pop<Tache>(modifiee);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,6 +61,12 @@ class DetailTache extends StatelessWidget {
               label: Text(
                 tache.faite ? 'Marquer à faire' : 'Marquer comme faite',
               ),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () => _modifier(context),
+              icon: const Icon(Icons.edit),
+              label: const Text('Modifier'),
             ),
           ],
         ),

@@ -3,9 +3,10 @@ import 'package:material_ui/material_ui.dart';
 import '../modele/taches.dart';
 
 class FormulaireTache extends StatefulWidget {
-  const FormulaireTache({super.key, required this.id});
+  const FormulaireTache({super.key, required this.id, this.initiale});
 
   final String id;
+  final Tache? initiale;
 
   @override
   State<FormulaireTache> createState() => _FormulaireTacheState();
@@ -18,6 +19,39 @@ class _FormulaireTacheState extends State<FormulaireTache> {
 
   Priorite _priorite = Priorite.normale;
   DateTime? _date;
+
+  bool _echeanceModifiee = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final initiale = widget.initiale;
+
+    if (initiale == null) return;
+
+    _titreController.text = initiale.titre;
+    _noteController.text = initiale.note ?? '';
+    _priorite = initiale.priorite;
+
+    _date = switch (initiale.echeance) {
+      EcheanceDate(:final date) => date,
+      SansEcheance() => null,
+      EcheanceHebdomadaire() => null,
+    };
+  }
+
+  Echeance get _echeanceActuelle {
+    final initiale = widget.initiale;
+
+    if (!_echeanceModifiee && initiale != null) {
+      return initiale.echeance;
+    }
+
+    final date = _date;
+
+    return date == null ? const SansEcheance() : EcheanceDate(date);
+  }
 
   Future<void> _choisirDate() async {
     final maintenant = DateTime.now();
@@ -42,6 +76,7 @@ class _FormulaireTacheState extends State<FormulaireTache> {
 
     setState(() {
       _date = choix;
+      _echeanceModifiee = true;
     });
   }
 
@@ -49,17 +84,25 @@ class _FormulaireTacheState extends State<FormulaireTache> {
     if (!_formKey.currentState!.validate()) return;
 
     final note = _noteController.text.trim();
-    final date = _date;
+    final titre = _titreController.text.trim();
+    final initiale = widget.initiale;
 
-    final nouvelle = Tache(
-      id: widget.id,
-      titre: _titreController.text.trim(),
-      priorite: _priorite,
-      echeance: date == null ? const SansEcheance() : EcheanceDate(date),
-      note: note.isEmpty ? null : note,
-    );
-
-    Navigator.of(context).pop<Tache>(nouvelle);
+    final resultat = initiale == null
+        ? Tache(
+            id: widget.id,
+            titre: titre,
+            priorite: _priorite,
+            echeance: _echeanceActuelle,
+            note: note.isEmpty ? null : note,
+          )
+        : initiale.copyWith(
+            titre: titre,
+            priorite: _priorite,
+            echeance: _echeanceActuelle,
+            note: note.isEmpty ? null : note,
+            supprimerNote: note.isEmpty,
+          );
+    Navigator.of(context).pop<Tache>(resultat);
   }
 
   @override
@@ -71,10 +114,12 @@ class _FormulaireTacheState extends State<FormulaireTache> {
 
   @override
   Widget build(BuildContext context) {
-    final date = _date;
-
     return Scaffold(
-      appBar: AppBar(title: const Text('Nouvelle tâche')),
+      appBar: AppBar(
+        title: Text(
+          widget.initiale == null ? 'Nouvelle tâche' : 'Modifier la tâche',
+        ),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Form(
@@ -128,6 +173,9 @@ class _FormulaireTacheState extends State<FormulaireTache> {
               const SizedBox(height: 20),
               FormField<DateTime>(
                 validator: (_) {
+                  if (widget.initiale != null && !_echeanceModifiee) {
+                    return null;
+                  }
                   final dateChoisie = _date;
 
                   if (dateChoisie == null) return null;
@@ -157,11 +205,7 @@ class _FormulaireTacheState extends State<FormulaireTache> {
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        date == null
-                            ? 'sans échéance'
-                            : libelleEcheance(EcheanceDate(date)),
-                      ),
+                      Text(libelleEcheance(_echeanceActuelle)),
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 12,
@@ -172,11 +216,12 @@ class _FormulaireTacheState extends State<FormulaireTache> {
                             icon: const Icon(Icons.calendar_month),
                             label: const Text('Choisir une date'),
                           ),
-                          if (date != null)
+                          if (_echeanceActuelle is! SansEcheance)
                             TextButton(
                               onPressed: () {
                                 setState(() {
                                   _date = null;
+                                  _echeanceModifiee = true;
                                 });
                               },
                               child: const Text('Retirer la date'),
